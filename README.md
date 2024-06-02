@@ -9,6 +9,7 @@ local robloxHttp = RobloxHttp({
     token = "<insert .ROBLOSECURITY token>",
     showRatelimitWarnings = false, -- default: true
     defaultRatelimitTimeout = 15, -- default: 10
+    handleUnauthorizedRequests = false, -- default: true
 })
 
 local response = robloxHttp:get("https://users.roblox.com/v1/users/authenticated")
