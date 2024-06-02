@@ -8,6 +8,7 @@ export type RobloxHttpOptions = {
 	token: string?,
 	defaultRatelimitTimeout: number?,
 	showRatelimitWarnings: boolean?,
+	handleUnauthorizedRequests: boolean?,
 }
 
 local function merge<T, K>(a: { [T]: K }, ...: { [T]: K }): { [T]: K }
@@ -54,9 +55,14 @@ local function RobloxHttp(options: RobloxHttpOptions?)
 		patchedOptions.showRatelimitWarnings = true
 	end
 
+	if patchedOptions.handleUnauthorizedRequests == nil then
+		patchedOptions.handleUnauthorizedRequests = true
+	end
+
 	local token: string? = patchedOptions.token
 	local defaultRatelimitTimeout: number = patchedOptions.defaultRatelimitTimeout
 	local showRatelimitWarnings = patchedOptions.showRatelimitWarnings == true
+	local handleUnauthorizedRequests = patchedOptions.handleUnauthorizedRequests == true
 
 	local csrfTokenCache: string? = nil
 	local robloxHttp = {}
@@ -72,7 +78,7 @@ local function RobloxHttp(options: RobloxHttpOptions?)
 			return robloxHttp:request(fetchParams)
 		end
 
-		if response.statusCode == 401 then
+		if response.statusCode == 401 and handleUnauthorizedRequests then
 			logAuthorizationError(fetchParams.method :: net.HttpMethod, fetchParams.url)
 		elseif response.statusCode == 429 then
 			local timeout = tonumber(response.headers["retry-after"]) or defaultRatelimitTimeout
