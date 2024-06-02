@@ -6,8 +6,8 @@ export type HttpBody = string | buffer
 
 export type RobloxHttpOptions = {
 	token: string?,
+	handleRatelimits: boolean?,
 	defaultRatelimitTimeout: number?,
-	showRatelimitWarnings: boolean?,
 	handleUnauthorizedRequests: boolean?,
 }
 
@@ -28,7 +28,7 @@ local function insertHeaders(fetchParams: net.FetchParams, extraHeaders: net.Htt
 	return merge(fetchParams, { headers = headers }) :: net.FetchParams
 end
 
-local function logRatelimitWarning(method: net.HttpMethod, url: string, timeout: number)
+local function logRatelimit(method: net.HttpMethod, url: string, timeout: number)
 	print(
 		`too many {stdio.color("green") .. method .. stdio.color("reset")} requests to {stdio.style("dim") .. url .. stdio.style(
 			"reset"
@@ -36,7 +36,7 @@ local function logRatelimitWarning(method: net.HttpMethod, url: string, timeout:
 	)
 end
 
-local function logAuthorizationError(method: net.HttpMethod, url: string)
+local function logUnauthorizedRequest(method: net.HttpMethod, url: string)
 	error(
 		`unauthorized {stdio.color("green") .. method .. stdio.color("reset")} request to {stdio.style("dim") .. url .. stdio.style(
 			"reset"
@@ -51,8 +51,8 @@ local function RobloxHttp(options: RobloxHttpOptions?)
 		patchedOptions.defaultRatelimitTimeout = 10
 	end
 
-	if patchedOptions.showRatelimitWarnings == nil then
-		patchedOptions.showRatelimitWarnings = true
+	if patchedOptions.handleRatelimits == nil then
+		patchedOptions.handleRatelimits = true
 	end
 
 	if patchedOptions.handleUnauthorizedRequests == nil then
@@ -60,8 +60,8 @@ local function RobloxHttp(options: RobloxHttpOptions?)
 	end
 
 	local token: string? = patchedOptions.token
+	local handleRatelimits = patchedOptions.handleRatelimits == true
 	local defaultRatelimitTimeout: number = patchedOptions.defaultRatelimitTimeout
-	local showRatelimitWarnings = patchedOptions.showRatelimitWarnings == true
 	local handleUnauthorizedRequests = patchedOptions.handleUnauthorizedRequests == true
 
 	local csrfTokenCache: string? = nil
@@ -79,15 +79,13 @@ local function RobloxHttp(options: RobloxHttpOptions?)
 		end
 
 		if response.statusCode == 401 and handleUnauthorizedRequests then
-			logAuthorizationError(fetchParams.method :: net.HttpMethod, fetchParams.url)
-		elseif response.statusCode == 429 then
+			logUnauthorizedRequest(fetchParams.method :: net.HttpMethod, fetchParams.url)
+		elseif response.statusCode == 429 and handleRatelimits then
 			local timeout = tonumber(response.headers["retry-after"]) or defaultRatelimitTimeout
 
-			if showRatelimitWarnings then
-				logRatelimitWarning(fetchParams.method :: net.HttpMethod, fetchParams.url, timeout)
-			end
-
+			logRatelimit(fetchParams.method :: net.HttpMethod, fetchParams.url, timeout)
 			task.wait(timeout)
+
 			return robloxHttp:request(fetchParams)
 		end
 
