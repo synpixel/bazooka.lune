@@ -11,6 +11,24 @@ export type BazookaOptions = {
 	handleUnauthorizedRequests: boolean?,
 }
 
+export type BazookaFetchParams = {
+	body: HttpBody?,
+	headers: net.HttpHeaderMap?,
+	options: net.FetchParamsOptions?,
+	query: net.HttpQueryMap?,
+}
+
+type BazookaRequestCallback = (_: Bazooka, url: string, fetchParams: BazookaFetchParams?) -> net.FetchResponse
+
+export type Bazooka = {
+	request: (_: Bazooka, fetchParams: net.FetchParams) -> net.FetchResponse,
+	get: BazookaRequestCallback,
+	post: BazookaRequestCallback,
+	patch: BazookaRequestCallback,
+	put: BazookaRequestCallback,
+	delete: BazookaRequestCallback,
+}
+
 local function merge<T, K>(a: { [T]: K }, ...: { [T]: K }): { [T]: K }
 	local clone = table.clone(a)
 
@@ -44,7 +62,7 @@ local function logUnauthorizedRequest(method: net.HttpMethod, url: string)
 	)
 end
 
-local function Bazooka(options: BazookaOptions?)
+local function Bazooka(options: BazookaOptions?): Bazooka
 	local patchedOptions = options or {}
 
 	if patchedOptions.defaultRatelimitTimeout == nil then
@@ -92,48 +110,23 @@ local function Bazooka(options: BazookaOptions?)
 		return response
 	end
 
-	function bazooka:get(url: string)
-		return bazooka:request({
-			method = "GET",
-			url = url,
-		})
+	local function makeRequestCallback(method: net.HttpMethod): BazookaRequestCallback
+		return function(_: Bazooka, url: string, fetchParams: BazookaFetchParams?)
+			local patchedFetchParams = fetchParams or {}
+			return bazooka:request(merge(patchedFetchParams, {
+				method = method,
+				url = url,
+			}))
+		end
 	end
 
-	function bazooka:post(url: string, body: HttpBody?)
-		return bazooka:request({
-			method = "POST",
-			url = url,
-			body = body,
-		})
-	end
-
-	function bazooka:patch(url: string, body: HttpBody?)
-		return bazooka:request({
-			method = "PATCH",
-			url = url,
-			body = body,
-		})
-	end
-
-	function bazooka:put(url: string, body: HttpBody?)
-		return bazooka:request({
-			method = "PUT",
-			url = url,
-			body = body,
-		})
-	end
-
-	function bazooka:delete(url: string, body: HttpBody?)
-		return bazooka:request({
-			method = "DELETE",
-			url = url,
-			body = body,
-		})
-	end
+	bazooka.get = makeRequestCallback("GET")
+	bazooka.post = makeRequestCallback("POST")
+	bazooka.patch = makeRequestCallback("PATCH")
+	bazooka.put = makeRequestCallback("PUT")
+	bazooka.delete = makeRequestCallback("DELETE")
 
 	return bazooka
 end
-
-export type Bazooka = typeof(Bazooka(...))
 
 return Bazooka
