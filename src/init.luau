@@ -134,4 +134,6 @@ local function Bazooka(options: BazookaOptions?)
 	return bazooka
 end
 
+export type Bazooka = typeof(Bazooka(...))
+
 return Bazooka
