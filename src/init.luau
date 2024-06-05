@@ -4,7 +4,7 @@ local task = require("@lune/task")
 
 export type HttpBody = string | buffer
 
-export type RobloxHttpOptions = {
+export type BazookaOptions = {
 	token: string?,
 	handleRatelimits: boolean?,
 	defaultRatelimitTimeout: number?,
@@ -40,11 +40,11 @@ local function logUnauthorizedRequest(method: net.HttpMethod, url: string)
 	error(
 		`unauthorized {stdio.color("green") .. method .. stdio.color("reset")} request to {stdio.style("dim") .. url .. stdio.style(
 			"reset"
-		)} give a valid token to the RobloxHttp constructor to avoid this`
+		)} give a valid token to the Bazooka constructor to avoid this`
 	)
 end
 
-local function RobloxHttp(options: RobloxHttpOptions?)
+local function Bazooka(options: BazookaOptions?)
 	local patchedOptions = options or {}
 
 	if patchedOptions.defaultRatelimitTimeout == nil then
@@ -65,9 +65,9 @@ local function RobloxHttp(options: RobloxHttpOptions?)
 	local handleUnauthorizedRequests = patchedOptions.handleUnauthorizedRequests == true
 
 	local csrfTokenCache: string? = nil
-	local robloxHttp = {}
+	local bazooka = {}
 
-	function robloxHttp:request(fetchParams: net.FetchParams)
+	function bazooka:request(fetchParams: net.FetchParams)
 		local response = net.request(insertHeaders(fetchParams, {
 			Cookie = ".ROBLOSECURITY=" .. (token or ""),
 			["X-Csrf-Token"] = csrfTokenCache,
@@ -75,7 +75,7 @@ local function RobloxHttp(options: RobloxHttpOptions?)
 
 		if response.headers["x-csrf-token"] then
 			csrfTokenCache = response.headers["x-csrf-token"]
-			return robloxHttp:request(fetchParams)
+			return bazooka:request(fetchParams)
 		end
 
 		if response.statusCode == 401 and handleUnauthorizedRequests then
@@ -86,52 +86,52 @@ local function RobloxHttp(options: RobloxHttpOptions?)
 			logRatelimit(fetchParams.method :: net.HttpMethod, fetchParams.url, timeout)
 			task.wait(timeout)
 
-			return robloxHttp:request(fetchParams)
+			return bazooka:request(fetchParams)
 		end
 
 		return response
 	end
 
-	function robloxHttp:get(url: string)
-		return robloxHttp:request({
+	function bazooka:get(url: string)
+		return bazooka:request({
 			method = "GET",
 			url = url,
 		})
 	end
 
-	function robloxHttp:post(url: string, body: HttpBody?)
-		return robloxHttp:request({
+	function bazooka:post(url: string, body: HttpBody?)
+		return bazooka:request({
 			method = "POST",
 			url = url,
 			body = body,
 		})
 	end
 
-	function robloxHttp:patch(url: string, body: HttpBody?)
-		return robloxHttp:request({
+	function bazooka:patch(url: string, body: HttpBody?)
+		return bazooka:request({
 			method = "PATCH",
 			url = url,
 			body = body,
 		})
 	end
 
-	function robloxHttp:put(url: string, body: HttpBody?)
-		return robloxHttp:request({
+	function bazooka:put(url: string, body: HttpBody?)
+		return bazooka:request({
 			method = "PUT",
 			url = url,
 			body = body,
 		})
 	end
 
-	function robloxHttp:delete(url: string, body: HttpBody?)
-		return robloxHttp:request({
+	function bazooka:delete(url: string, body: HttpBody?)
+		return bazooka:request({
 			method = "DELETE",
 			url = url,
 			body = body,
 		})
 	end
 
-	return robloxHttp
+	return bazooka
 end
 
-return RobloxHttp
+return Bazooka
