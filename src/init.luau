@@ -18,10 +18,10 @@ export type BazookaFetchParams = {
 	query: net.HttpQueryMap?,
 }
 
-type BazookaRequestCallback = (_: Bazooka, url: string, fetchParams: BazookaFetchParams?) -> net.FetchResponse
+type BazookaRequestCallback = (Bazooka, url: string, fetchParams: BazookaFetchParams?) -> net.FetchResponse
 
 export type Bazooka = {
-	request: (_: Bazooka, fetchParams: net.FetchParams) -> net.FetchResponse,
+	request: (Bazooka, fetchParams: net.FetchParams) -> net.FetchResponse,
 	get: BazookaRequestCallback,
 	post: BazookaRequestCallback,
 	patch: BazookaRequestCallback,
